@@ -14,8 +14,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "io.medisense.app",
-      "minSdkVersion": 31
+      "package": "io.medisense.app"
     },
     "web": { "favicon": "./assets/favicon.png" },
     "plugins": [
