@@ -5,6 +5,8 @@
   "dependencies": {
     "@qvac/sdk": "^0.13.3",
     "expo": "~56.0.12",
+    "expo-build-properties": "^56.0.19",
+    "expo-dev-client": "~56.0.20",
     "expo-device": "^56.0.4",
     "expo-file-system": "^56.0.8",
     "expo-status-bar": "~56.0.4",
