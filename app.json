@@ -6,9 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "ios": {
-      "supportsTablet": false
-    },
+    "ios": { "supportsTablet": false },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a",
@@ -19,11 +17,14 @@
       "package": "io.medisense.app",
       "minSdkVersion": 31
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "web": { "favicon": "./assets/favicon.png" },
     "plugins": [
       "./node_modules/@qvac/sdk/dist/expo/plugins/index.js"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "be46fe52-0ebc-400d-94f5-8981ed7c9f02"
+      }
+    }
   }
 }
