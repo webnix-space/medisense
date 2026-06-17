@@ -23,7 +23,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@qvac/sdk"
+      "./node_modules/@qvac/sdk/dist/expo/plugins/index.js"
     ]
   }
 }
