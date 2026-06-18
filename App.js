@@ -12,6 +12,7 @@ export default function App() {
   const [modelId, setModelId] = useState(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [errorMsg, setErrorMsg] = useState("");
   const [logs, setLogs] = useState([]);
 
   const log = (entry) => {
@@ -38,7 +39,8 @@ export default function App() {
       log({ event: "model_load", model: MODEL_ID, ttft_ms: Date.now() - start });
     } catch (e) {
       setStatus("error");
-      log({ event: "model_error", error: e.message });
+      setErrorMsg(String(e?.message || e));
+      log({ event: "model_error", error: String(e?.message || e) });
     }
   };
 
@@ -83,7 +85,8 @@ export default function App() {
         tps: (tokenCount / (elapsed / 1000)).toFixed(2)
       });
     } catch (e) {
-      log({ event: "inference_error", error: e.message });
+      setErrorMsg(String(e?.message || e));
+      log({ event: "inference_error", error: String(e?.message || e) });
     }
     setStatus("ready");
   };
@@ -96,12 +99,13 @@ export default function App() {
         <View style={[s.badge, status === "ready" && s.badgeGreen]}>
           <Text style={s.badgeText}>{status.toUpperCase()}</Text>
         </View>
+        {errorMsg ? <Text style={s.errorText}>{errorMsg}</Text> : null}
       </View>
       <ScrollView style={s.chat} contentContainerStyle={{ padding: 16 }}>
         {messages.length === 0 && status === "ready" && (
           <Text style={s.placeholder}>Describe your symptoms. Everything stays on your device.</Text>
         )}
-        {status === "loading" || status.startsWith("Loading") ? (
+        {(status === "loading" || status.startsWith("Loading")) ? (
           <View style={s.center}>
             <ActivityIndicator size="large" color="#00ff88" />
             <Text style={s.loadText}>{status}</Text>
@@ -142,6 +146,7 @@ const s = StyleSheet.create({
   badge: { marginTop: 8, alignSelf: "flex-start", backgroundColor: "#1a1a1a", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeGreen: { backgroundColor: "#003322" },
   badgeText: { color: "#00ff88", fontSize: 11, fontWeight: "bold" },
+  errorText: { color: "#ff4444", fontSize: 12, marginTop: 8, flexWrap: "wrap" },
   chat: { flex: 1 },
   placeholder: { color: "#333", textAlign: "center", marginTop: 40, fontSize: 14 },
   center: { alignItems: "center", marginTop: 60 },
