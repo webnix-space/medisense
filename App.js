@@ -32,6 +32,7 @@ export default function App() {
     try {
       const id = await loadModel({
         modelSrc: MODEL_ID,
+        modelType: "llamacpp-completion",
         onProgress: (p) => setStatus(`Loading ${Math.round(p*100)}%`)
       });
       setModelId(id);
