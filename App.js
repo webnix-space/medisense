@@ -77,7 +77,7 @@ export default function App() {
         if (!firstToken) firstToken = Date.now() - start;
         response += token;
         tokenCount++;
-        setMessages([...newMessages, { role: "assistant", content: response }]);
+        setMessages(prev => [...prev.slice(0, -1), { role: "assistant", content: response }]);
       }
       const elapsed = Date.now() - start;
       log({
