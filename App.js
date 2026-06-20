@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { loadModel, completion, unloadModel } from "@qvac/sdk";
 
-const MODEL_SRC = "Qwen3-4B-Q4_K_M.gguf";
+const MODEL_SRC = "https://huggingface.co/qvac/MedPsy-1.7B-GGUF/resolve/main/medpsy-1.7b-q4_k_m-imat.gguf";
 
 export default function App() {
   const [status, setStatus] = useState("idle");
