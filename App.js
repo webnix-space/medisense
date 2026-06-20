@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { loadModel, completion, unloadModel } from "@qvac/sdk";
 
-const MODEL_SRC = "hf:qvac/MedPsy-1.7B-GGUF/medpsy-1.7b-q4_k_m.gguf";
+const MODEL_SRC = "hf:qvac/MedPsy-1.7B-GGUF/medpsy-1.7b-q4_k_m-imat.gguf";
 
 export default function App() {
   const [status, setStatus] = useState("idle");
