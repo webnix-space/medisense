@@ -36,6 +36,7 @@ export default function App() {
       const id = await loadModel({
         modelSrc: MODEL_SRC,
         modelType: "llamacpp-completion",
+        modelConfig: { device: "cpu", ctx_size: 2048 },
         onProgress: (p) => {
           setProgress(Math.round(p * 100));
           setStatus("loading");
