@@ -87,7 +87,8 @@ export default function App() {
         if (!firstToken) firstToken = Date.now() - start;
         rawResponse += token;
         tokenCount++;
-        const clean = stripThinking(rawResponse);
+        const hasOpenThink = rawResponse.includes("<think>") && !rawResponse.includes("</think>");
+        const clean = hasOpenThink ? "" : stripThinking(rawResponse);
         if (clean) {
           setMessages([...newMessages, { role: "assistant", content: clean }]);
         }
