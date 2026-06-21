@@ -2,13 +2,25 @@ import { useState, useEffect, useRef } from "react";
 import {
   StyleSheet, Text, View, TextInput,
   TouchableOpacity, ScrollView, ActivityIndicator,
-  SafeAreaView, StatusBar
+  SafeAreaView, StatusBar, Alert
 } from "react-native";
 import { loadModel, completion, unloadModel } from "@qvac/sdk";
+import * as FileSystem from "expo-file-system";
 
 const MODEL_SRC = "https://huggingface.co/qvac/MedPsy-1.7B-GGUF/resolve/main/medpsy-1.7b-q4_k_m-imat.gguf";
+const LOG_FILE = FileSystem.documentDirectory + "medisense_logs.json";
 
 const stripThinking = (text) => text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+
+const renderText = (text) => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <Text key={i} style={{ fontWeight: "bold", color: "#fff" }}>{part.slice(2, -2)}</Text>;
+    }
+    return <Text key={i}>{part}</Text>;
+  });
+};
 
 export default function App() {
   const [status, setStatus] = useState("idle");
@@ -19,11 +31,16 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState([]);
   const scrollRef = useRef(null);
+  const logsRef = useRef([]);
 
-  const log = (entry) => {
-    const record = { ...entry, timestamp: Date.now() };
-    setLogs(prev => [...prev, record]);
+  const log = async (entry) => {
+    const record = { ...entry, timestamp: new Date().toISOString() };
+    logsRef.current = [...logsRef.current, record];
+    setLogs([...logsRef.current]);
     console.log(JSON.stringify(record));
+    try {
+      await FileSystem.writeAsStringAsync(LOG_FILE, JSON.stringify(logsRef.current, null, 2));
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -32,7 +49,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages]);
 
   const initModel = async () => {
@@ -44,21 +61,29 @@ export default function App() {
         modelSrc: MODEL_SRC,
         modelType: "llamacpp-completion",
         modelConfig: { device: "cpu", ctx_size: 2048 },
-        onProgress: (p) => setProgress(Math.round((p.percentage || 0)))
+        onProgress: (p) => setProgress(Math.round(p.percentage || p * 100 || 0))
       });
       setModelId(id);
       setStatus("ready");
-      log({ event: "model_load", model: "MedPsy-1.7B", load_ms: Date.now() - start });
+      await log({ event: "model_load", model: "MedPsy-1.7B-GGUF", load_ms: Date.now() - start });
     } catch (e) {
       setStatus("error");
       setErrorMsg(String(e?.message || e));
-      log({ event: "model_error", error: String(e?.message || e) });
+      await log({ event: "model_error", error: String(e?.message || e) });
     }
   };
 
   const newChat = () => {
     setMessages([]);
     setErrorMsg("");
+  };
+
+  const showLogs = () => {
+    Alert.alert(
+      "Performance Logs",
+      `Log file: ${LOG_FILE}\n\nEvents: ${logsRef.current.length}\n\nLast inference:\n${JSON.stringify(logsRef.current.filter(l => l.event === "inference").slice(-1)[0] || {}, null, 2)}`,
+      [{ text: "OK" }]
+    );
   };
 
   const send = async () => {
@@ -72,7 +97,7 @@ export default function App() {
     const history = [
       {
         role: "user",
-        content: `You are MediSense, a private offline medical symptom screener powered by MedPsy AI. Be concise and safe. Always remind you are not a doctor. Give triage guidance and safe general wellness advice like hydration, rest, breathing exercises when appropriate. User reports: ${userMsg}`
+        content: `You are MediSense, a private offline medical symptom screener powered by MedPsy AI. Be concise and safe. Always remind you are not a doctor. Give clear triage guidance. User reports: ${userMsg}`
       }
     ];
 
@@ -94,9 +119,9 @@ export default function App() {
         }
       }
       const elapsed = Date.now() - start;
-      log({
+      await log({
         event: "inference",
-        model: "MedPsy-1.7B",
+        model: "MedPsy-1.7B-GGUF",
         prompt: userMsg,
         tokens: tokenCount,
         ttft_ms: firstToken,
@@ -105,7 +130,7 @@ export default function App() {
       });
     } catch (e) {
       setErrorMsg(String(e?.message || e));
-      log({ event: "inference_error", error: String(e?.message || e) });
+      await log({ event: "inference_error", error: String(e?.message || e) });
     }
     setStatus("ready");
   };
@@ -115,13 +140,16 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor="#050505" />
       <View style={s.header}>
         <View style={s.headerTop}>
-          <View>
+          <TouchableOpacity onPress={showLogs}>
             <Text style={s.title}>MediSense</Text>
             <Text style={s.subtitle}>MedPsy-1.7B · Private · Offline</Text>
-          </View>
+          </TouchableOpacity>
           <View style={s.headerRight}>
-            <View style={[s.statusDot, status === "ready" && s.dotGreen, status === "error" && s.dotRed, status === "thinking" && s.dotYellow]} />
-            {messages.length > 0 && status === "ready" && (
+            <View style={[s.statusDot,
+              status === "ready" && s.dotGreen,
+              status === "error" && s.dotRed,
+              status === "thinking" && s.dotYellow]} />
+            {status === "ready" && (
               <TouchableOpacity onPress={newChat} style={s.newChatBtn}>
                 <Text style={s.newChatText}>+ New</Text>
               </TouchableOpacity>
@@ -139,14 +167,14 @@ export default function App() {
       </View>
 
       <ScrollView ref={scrollRef} style={s.chat} contentContainerStyle={s.chatContent}>
-        {(status === "loading") ? (
+        {status === "loading" ? (
           <View style={s.loadingContainer}>
             <ActivityIndicator size="large" color="#00c853" />
-            <Text style={s.loadingText}>Loading MedPsy... {progress}%</Text>
+            <Text style={s.loadingText}>Loading MedPsy-1.7B... {progress}%</Text>
             <View style={s.progressBar}>
-              <View style={[s.progressFill, { width: `${progress}%` }]} />
+              <View style={[s.progressFill, { width: `${Math.min(progress, 100)}%` }]} />
             </View>
-            <Text style={s.loadingSubtext}>First load downloads model over WiFi</Text>
+            <Text style={s.loadingSubtext}>First load downloads model over WiFi{"\n"}Subsequent loads are instant</Text>
           </View>
         ) : null}
 
@@ -154,7 +182,7 @@ export default function App() {
           <View style={s.emptyState}>
             <Text style={s.emptyIcon}>🩺</Text>
             <Text style={s.emptyTitle}>MediSense</Text>
-            <Text style={s.emptyText}>Private symptom screening. Powered by MedPsy AI. No data leaves your device.</Text>
+            <Text style={s.emptyText}>Private symptom screening powered by MedPsy AI.{"\n"}No data leaves your device.</Text>
             <View style={s.chips}>
               {["Headache & fever", "Chest tightness", "Fatigue & dizziness", "Stomach pain"].map(c => (
                 <TouchableOpacity key={c} style={s.chip} onPress={() => setInput(c)}>
@@ -168,7 +196,9 @@ export default function App() {
         {messages.map((m, i) => (
           <View key={i} style={[s.bubble, m.role === "user" ? s.userBubble : s.aiBubble]}>
             {m.role === "assistant" && <Text style={s.roleLabel}>MEDISENSE</Text>}
-            <Text style={s.bubbleText}>{m.content}</Text>
+            <Text style={s.bubbleText}>
+              {m.role === "assistant" ? renderText(m.content) : m.content}
+            </Text>
           </View>
         ))}
 
@@ -191,7 +221,6 @@ export default function App() {
             placeholderTextColor="#444"
             multiline
             maxLength={500}
-            onSubmitEditing={send}
           />
           <TouchableOpacity
             style={[s.sendBtn, (status !== "ready" || !input.trim()) && s.sendBtnDisabled]}
@@ -227,7 +256,7 @@ const s = StyleSheet.create({
   chatContent: { padding: 16, paddingBottom: 8 },
   loadingContainer: { alignItems: "center", marginTop: 80, paddingHorizontal: 40 },
   loadingText: { color: "#00c853", fontSize: 16, marginTop: 16, fontWeight: "600" },
-  loadingSubtext: { color: "#333", fontSize: 12, marginTop: 8, textAlign: "center" },
+  loadingSubtext: { color: "#333", fontSize: 12, marginTop: 8, textAlign: "center", lineHeight: 18 },
   progressBar: { width: "100%", height: 3, backgroundColor: "#111", borderRadius: 2, marginTop: 12, overflow: "hidden" },
   progressFill: { height: "100%", backgroundColor: "#00c853", borderRadius: 2 },
   emptyState: { alignItems: "center", marginTop: 60, paddingHorizontal: 24 },
